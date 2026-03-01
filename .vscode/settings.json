@@ -1,0 +1,15 @@
+{
+   "luau-lsp.plugin.enabled": true,
+   "luau-lsp.fflags.enableNewSolver": true,
+    
+  "editor.defaultFormatter": "JohnnyMorganz.stylua",
+  
+  "[lua]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua"
+  },
+  "[luau]": {
+    "editor.defaultFormatter": "JohnnyMorganz.stylua"
+},
+"luau-lsp.sourcemap.rojoProjectFile": "Ecosystem.project.json"
+
+}

@@ -1,0 +1,20 @@
+{
+  "name": "EcosystemV2",
+  "emitLegacyScripts": false,
+  
+  
+  "tree": {
+    "$ignoreUnknownInstances": true,
+    "$className": "DataModel",
+
+    "Workspace": {
+      "EcosystemV2": {
+        "$className": "Folder",
+        
+          "Ecosystem": {
+          "$path": "src"
+        }
+      }
+    }
+  }
+}

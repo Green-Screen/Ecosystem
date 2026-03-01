@@ -1,0 +1,77 @@
+{
+  "name": "EcosystemV2",
+  "className": "DataModel",
+  "filePaths": [
+    "Ecosystem.project.json"
+  ],
+  "children": [
+    {
+      "name": "Workspace",
+      "className": "Workspace",
+      "children": [
+        {
+          "name": "EcosystemV2",
+          "className": "Folder",
+          "children": [
+            {
+              "name": "Ecosystem",
+              "className": "ModuleScript",
+              "filePaths": [
+                "src/init.luau"
+              ],
+              "children": [
+                {
+                  "name": "Dependencies",
+                  "className": "Folder",
+                  "children": [
+                    {
+                      "name": "CategoryService",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "src/Dependencies/CategoryService.luau"
+                      ]
+                    },
+                    {
+                      "name": "EasyType",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "src/Dependencies/EasyType.luau"
+                      ]
+                    },
+                    {
+                      "name": "SmartTable",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "src/Dependencies/SmartTable.luau"
+                      ]
+                    },
+                    {
+                      "name": "TramService",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "src/Dependencies/TramService.luau"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "tests",
+                  "className": "Folder",
+                  "children": [
+                    {
+                      "name": "Test",
+                      "className": "Script",
+                      "filePaths": [
+                        "src/tests/Test.server.luau"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

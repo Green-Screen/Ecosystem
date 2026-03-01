@@ -1,24 +1,21 @@
 # Ecosystem
 
 ## Current Version: V 2.0
-Added type safety for luau type solver
 
-Tram Service is a replacement to Bindable events
-Tram Service offers many performance improvments and features such as:
+Ecosystem is a FSM built for easy overall control ment to act as a manager
+and dispatcher to control many different things specializing in AI
 
 ### **Features:**
 
-- 	Same functionality as bindable Events
-- 	Thead Cacheing
-- 	Signal Based
-- 	Single point source to handle ALL events
-- 	Able to create traversable and sticky events
-- 	Built for performance
-- 	Similar api to bindable events
+-   Single point sourced
+-   Fully type annotated to support the luau type solver
+-   built in signalling between species to communicate internally
+-   static and server optimized
+-   Dynamic
 
 ### **Changelog:**
 
--   Added type safety for luau type solver
--   Syntax cleanup
+-   Complete rewrite
+-   similar api to the previous version
 
 **_This module is still in testing and is not yet ready for production usage_**

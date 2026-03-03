@@ -26,9 +26,17 @@ TestEcosystem:AddCustomProperty("CurrentTarget", "Non") -- Local
 
 -- A property that is linked to the ECOSYSTEM
 TestEcosystem:SetFunctionEnviorment("Walkspeed", 20) -- Global
+TestEcosystem:SetFunctionEnviorment("Math", math.huge)
+
+--[[TestEcosystem.__EnvUpdate:Connect(function(...)
+	warn(...)
+end)]]
 
 -- false
 print(TestEcosystem:IsPrimed())
+
+-- Will error because ecosystem is not primed
+--TestEcosystem:UpdateEnvVar("Walkspeed", 100)
 
 -- Freezes current ecosystem
 TestEcosystem:Prime()
@@ -37,4 +45,21 @@ TestEcosystem:Prime()
 print(TestEcosystem:IsPrimed())
 
 -- Will error as ecosystem is now frozen
-TestEcosystem:SetFunctionEnviorment("Range", 150)
+--TestEcosystem:SetFunctionEnviorment("Range", 150)
+
+-- Updates
+TestEcosystem:UpdateEnvVar("Walkspeed", nil)
+TestEcosystem:UpdateEnvVar("Walkspeed", 300)
+
+-- Gets single var
+print(TestEcosystem:GetEnviorment("Walkspeed"))
+-- Gets all vars
+print(TestEcosystem:GetEnviorment(), TestEcosystem)
+
+Ecosystem.NewEcosystem("Test2")
+
+-- Creates a species sub type
+Ecosystem.NewSpecies("Test")
+
+-- Will error as Prime hasnt been called yet
+Ecosystem.NewSpecies("Test2")

@@ -9,7 +9,7 @@
 
 local EasyType = require("@self/Dependencies/EasyType")
 local SmartTable = require("@self/Dependencies/SmartTable")
-
+local TramService = require("@self/Dependencies/TramService")
 ----------------------------------------------------------------------------------------------
 
 -- 							[[ Types ]]
@@ -30,40 +30,52 @@ export type Ecosystem = {
 
 	read Prime: (self: Ecosystem) -> (),
 	read IsPrimed: (self: Ecosystem) -> boolean,
+
+	read UpdateEnvVar: (self: Ecosystem, EnvVar: string, Data: any?) -> (),
+	read GetEnviorment: ((self: Ecosystem, EnvVar: nil) -> { [string]: any })
+		& ((self: Ecosystem, EnvVar: string) -> any),
 }
 
 export type Species = {}
 
-type InternalEcosystem = setmetatable<
+type IE = setmetatable<
 	{
-		write EcosystemID: string,
-		write States: { [string]: () -> () },
-		write InternalProperties: { [string]: any? },
+		EcosystemID: string,
+		States: { [string]: () -> () },
+		InternalProperties: { [string]: any? },
 	},
 	{
-		read __index: InternalEcosystem,
-		read ClassName: string,
+		__index: IE,
+		ClassName: string,
 
-		write FunctionEnvVars: { [string]: any? },
-		write Frozen: boolean,
+		FunctionEnvVars: { [string]: any? },
+		Frozen: boolean,
+		__EnvUpdate: TramService.ModuleEvent<"Enviorment" | "Signal", string, string?>,
 
-		write AddStateAndFeature: (
+		AddStateAndFeature: (
 			self: Ecosystem,
 			State: string,
 			Feature: (CurrentSpecies: Species, StateFrom: string) -> string
 		) -> (),
-		write AddCustomProperty: (self: InternalEcosystem, PropertyIndex: string, InitialValue: any?) -> (),
-		write SetFunctionEnviorment: (self: InternalEcosystem, PropertyIndex: string, InitialValue: any) -> (),
+		AddCustomProperty: (self: IE, PropertyIndex: string, InitialValue: any?) -> (),
+		SetFunctionEnviorment: (self: IE, PropertyIndex: string, InitialValue: any) -> (),
 
-		write Prime: (self: InternalEcosystem) -> (),
-		write IsPrimed: (self: InternalEcosystem) -> boolean,
+		Prime: (self: IE) -> (),
+		IsPrimed: (self: IE) -> boolean,
+
+		UpdateEnvVar: (self: IE, EnvVar: string, Data: any?) -> (),
 	}
 >
 
-type InternalSpecies = {
-	read __index: InternalSpecies,
-	read ClassName: string,
-} & Species
+type IS =
+	setmetatable<{}, {
+		__index: IS,
+		ClassName: string,
+	}>
+	& Species
+
+type InternalEcosystem = IE & getmetatable<IE>
+type InternalSpecies = IS & getmetatable<IS>
 
 ----------------------------------------------------------------------------------------------
 
@@ -76,7 +88,9 @@ local SERVICE_NAME = "[Ecosystem]:"
 
 -- 							[[ Private functions (helpers) ]]
 
-local EcosystemCache = {}
+local EcosystemCache: { [string]: InternalEcosystem & getmetatable<InternalEcosystem> } = {}
+local EnviormentUpdateKey = "Enviorment"
+local BroadcastUpdateKey = "Signal"
 
 ----------------------------------------------------------------------------------------------
 --					 		[[ Species MetaData (MetaTable) ]]
@@ -128,7 +142,7 @@ function EcosystemMetaData:SetFunctionEnviorment(PropertyIndex: string, InitialV
 	)
 	assert(not self.Frozen, string.format("%s %s is primed and read only", SERVICE_NAME, self.EcosystemID))
 
-	self.FunctionEnvVars[PropertyIndex] = InitialValue
+	self.FunctionEnvVars[PropertyIndex] = InitialValue or "Init"
 end
 
 -- Turns the ecosystem into read only and cannot assign any new properties, enviorment varibles and states/functions
@@ -139,10 +153,39 @@ function EcosystemMetaData:Prime()
 	)
 	--WriteToClonedMT(self, "Frozen", true)
 	getmetatable(self :: InternalEcosystem)["Frozen"] = true
+
+	EcosystemCache[self.EcosystemID] = self
 end
 
 function EcosystemMetaData:IsPrimed()
 	return self.Frozen
+end
+
+function EcosystemMetaData:UpdateEnvVar(EnvVar: string, Data: any?)
+	assert(
+		self.FunctionEnvVars[EnvVar],
+		string.format("%s Attempt to index Enviorment variable %s: Enviorment is not declared", SERVICE_NAME, EnvVar)
+	)
+	assert(self:IsPrimed(), string.format("%s Ecosystem must be primed to update environment variables", SERVICE_NAME))
+	local OldData = self.FunctionEnvVars[EnvVar]
+	self.FunctionEnvVars[EnvVar] = Data or "nil"
+	self.__EnvUpdate:Fire(EnviormentUpdateKey, Data, if OldData == "nil" then nil else OldData)
+end
+
+function EcosystemMetaData:GetEnviorment(EnvVar: string?)
+	if EnvVar then
+		assert(
+			self.FunctionEnvVars[EnvVar],
+			string.format(
+				"%s Attempt to index Enviorment variable %s: Enviorment is not declared",
+				SERVICE_NAME,
+				EnvVar
+			)
+		)
+		return self.FunctionEnvVars[EnvVar]
+	else
+		return self.FunctionEnvVars
+	end
 end
 
 ----------------------------------------------------------------------------------------------
@@ -155,6 +198,10 @@ function Ecosystem.NewEcosystem(Identifyer: string): Ecosystem
 		not EcosystemCache[Identifyer],
 		string.format("%s Attempt to register '%s' Id is already taken", SERVICE_NAME, Identifyer)
 	)
+	assert(
+		EasyType(Identifyer) == "string",
+		string.format("%s Identifyer must be a string got %s", SERVICE_NAME, Identifyer)
+	)
 
 	local self = {}
 
@@ -164,11 +211,34 @@ function Ecosystem.NewEcosystem(Identifyer: string): Ecosystem
 	self.InternalProperties = {} -- local
 
 	local T = table.clone(EcosystemMetaData)
+	T.__EnvUpdate = TramService.NewTram(`__EnvUpdate_{Identifyer}`, nil, nil, true)
 	T.__index = T
 	setmetatable(self, T)
 
-	EcosystemCache[Identifyer] = self
+	EcosystemCache[Identifyer] = self :: any
 	return self :: Ecosystem
+end
+
+function Ecosystem.NewSpecies(Identifyer: string)
+	assert(
+		EcosystemCache[Identifyer],
+		string.format("%s Attempt to get Ecosystem %s: got nil", SERVICE_NAME, Identifyer)
+	)
+	assert(
+		EasyType(Identifyer) == "string",
+		string.format("%s Identifyer must be a string got %s", SERVICE_NAME, Identifyer)
+	)
+
+	local Parent: InternalEcosystem = EcosystemCache[Identifyer]
+
+	assert(
+		Parent.Frozen,
+		string.format(
+			"%s Attempt to generate species from Ecosystem %s where [Primed] is False",
+			SERVICE_NAME,
+			Identifyer
+		)
+	)
 end
 
 return Ecosystem

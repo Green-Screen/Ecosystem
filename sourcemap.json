@@ -64,6 +64,13 @@
                       "filePaths": [
                         "src/tests/Test.server.luau"
                       ]
+                    },
+                    {
+                      "name": "Test2",
+                      "className": "Script",
+                      "filePaths": [
+                        "src/tests/Test2.server.luau"
+                      ]
                     }
                   ]
                 }

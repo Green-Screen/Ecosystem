@@ -1,6 +1,5 @@
 --!strict
 local Ecosystem = require("../")
-
 local TestEcosystem = Ecosystem.NewEcosystem("Test")
 
 -- Will error as duplicate ID's are found
@@ -10,12 +9,15 @@ TestEcosystem:AddStateAndFeature("idle", function(CurrentSpecies: Ecosystem.Spec
 	-- Do static lines up here stuff that only needs to be assigned once at the start of a state
 
 	while true do
+		warn("Run")
 		-- All main loop logic should happen inside
-		task.wait()
+		task.wait(5)
 
 		if math.random(1, 2) == 1 then
+			print("1")
 			return "Next State 1" -- Returns the next State string
 		else
+			print("2")
 			return "Next State 2" -- ill add better type annotations
 		end
 	end
@@ -33,16 +35,15 @@ TestEcosystem:SetFunctionEnviorment("Math", math.huge)
 end)]]
 
 -- false
-print(TestEcosystem:IsPrimed())
+print(TestEcosystem.Frozen)
 
 -- Will error because ecosystem is not primed
 --TestEcosystem:UpdateEnvVar("Walkspeed", 100)
-
 -- Freezes current ecosystem
-TestEcosystem:Prime()
+TestEcosystem:Freeze()
 
 -- true
-print(TestEcosystem:IsPrimed())
+print(TestEcosystem.Frozen)
 
 -- Will error as ecosystem is now frozen
 --TestEcosystem:SetFunctionEnviorment("Range", 150)
@@ -59,7 +60,19 @@ print(TestEcosystem:GetEnviorment(), TestEcosystem)
 Ecosystem.NewEcosystem("Test2")
 
 -- Creates a species sub type
-Ecosystem.NewSpecies("Test")
+local TestSpecies = Ecosystem.NewSpecies("Test")
 
 -- Will error as Prime hasnt been called yet
-Ecosystem.NewSpecies("Test2")
+--Ecosystem.NewSpecies("Test2")
+
+-- Gets data assigned
+print(TestSpecies, getmetatable(TestSpecies))
+
+-- Starts running cycle
+TestSpecies:Start("idle")
+
+-- Errors as start has been called already
+TestSpecies:Start("idle")
+
+-- Stops the running thread and closes all current calls
+TestSpecies:Stop()

@@ -32,6 +32,10 @@ export type Ecosystem = {
 	read UpdateEnvVar: (self: Ecosystem, EnvVar: string, Data: any?) -> (),
 	read GetEnviorment: ((self: Ecosystem, EnvVar: nil) -> { [string]: any })
 		& ((self: Ecosystem, EnvVar: string) -> any),
+	read ForceAllStates: (self: Ecosystem, StateID: string) -> (),
+
+	-- EnvVar NewData, OldData
+	read EnvUpdate: TramService.ModuleEvent<string, any, any>,
 }
 
 export type Species = {
@@ -46,12 +50,12 @@ export type Species = {
 	read Start: (self: Species, StateID: string) -> (),
 	read Stop: (self: Species) -> (),
 
-	GetEnviorment: ((self: Species, EnvVar: nil) -> { [string]: any }) & ((self: IS, EnvVar: string) -> any),
-	SetProperty: (self: Species, Property: string, Value: any) -> (),
-	GetProperty: (self: Species, Property: string) -> any,
+	read ForceState: (self: Species, StateID: string) -> (),
 
-	-- EnvVar NewData, OldData
-	read EnvUpdate: TramService.ModuleEvent<string, any, any>,
+	read GetEnviorment: ((self: Species, EnvVar: nil) -> { [string]: any }) & ((self: IS, EnvVar: string) -> any),
+	read SetProperty: (self: Species, Property: string, Value: any) -> (),
+	read GetProperty: (self: Species, Property: string) -> any,
+
 	-- StateFrom, StateTo
 	read StateChanged: TramService.ModuleEvent<string, string>,
 }
@@ -81,6 +85,8 @@ type IE = setmetatable<
 		Freeze: (self: IE) -> (),
 
 		UpdateEnvVar: (self: IE, EnvVar: string, Data: any?) -> (),
+
+		ForceAllStates: (self: IE, StateID: string) -> (),
 	}
 >
 
@@ -113,6 +119,7 @@ type IS = setmetatable<
 
 		Start: (self: IS, StateID: string) -> (),
 		Stop: (self: IS) -> (),
+		ForceState: (self: IS, StateID: string) -> (),
 
 		GetEnviorment: ((self: IS, EnvVar: nil) -> { [string]: any }) & ((self: IS, EnvVar: string) -> any),
 		SetProperty: (self: IS, Property: string, Value: any) -> (),
@@ -127,7 +134,7 @@ type InternalSpecies = IS & getmetatable<IS>
 
 -- 							[[ Service Header ]]
 
--- A FSM built for mass AI control
+-- A FSM built for mass AI and instance control
 local SERVICE_NAME = "[Ecosystem]:"
 
 ----------------------------------------------------------------------------------------------
@@ -135,6 +142,14 @@ local SERVICE_NAME = "[Ecosystem]:"
 -- 							[[ Private functions (helpers) ]]
 
 local EcosystemCache: { [string]: InternalEcosystem & getmetatable<InternalEcosystem> } = {}
+
+-- Returns if the thread is not running
+local function IsThreadRunning(T: thread)
+	if T then
+		return coroutine.status(T) ~= "dead"
+	end
+	return false
+end
 ----------------------------------------------------------------------------------------------
 --					 		[[ Species MetaData (MetaTable) ]]
 
@@ -142,11 +157,12 @@ local SpeciesMetaData = {}
 SpeciesMetaData.__index = SpeciesMetaData
 SpeciesMetaData.ClassName = "Species"
 
+-- Stats the state loop
 function SpeciesMetaData:Start(StateID: string)
 	local StartingFunction = self.States[StateID]
 	assert(self.States[StateID], string.format("%s attempt to get unknown state %s", SERVICE_NAME, StateID))
 	assert(
-		not self.HandelingThread or coroutine.status(self.HandelingThread) == "dead",
+		not IsThreadRunning(self.HandelingThread),
 		string.format(
 			"%s attempt to start already running Species ID %s under ecosystem %s",
 			SERVICE_NAME,
@@ -155,19 +171,22 @@ function SpeciesMetaData:Start(StateID: string)
 		)
 	)
 
+	self.CurrentState = StateID
 	self.HandelingThread = task.spawn(function()
 		while true do
 			local OldState = self.CurrentState
-			local NextState: string = StartingFunction(self, OldState)
+			local NextState: string = StartingFunction(self :: Species, OldState)
 
-			self.CurrentState = StateID
+			self.CurrentState = NextState
 
 			StartingFunction = self.States[NextState]
 			-- Broadcast update
+			self.StateChanged:Fire(OldState, NextState)
 		end
 	end)
 end
 
+-- Stops the state loop
 function SpeciesMetaData:Stop()
 	assert(
 		self.HandelingThread,
@@ -176,6 +195,21 @@ function SpeciesMetaData:Stop()
 	task.cancel(self.HandelingThread)
 end
 
+-- Forces the state loop to stop and restart on the new state
+function SpeciesMetaData:ForceState(StateID: string)
+	assert(self.States[StateID], string.format("%s attempt to get unknown state %s", SERVICE_NAME, StateID))
+
+	if IsThreadRunning(self.HandelingThread) then
+		local CurrentState = self.CurrentState
+		self:Stop()
+		self:Start(StateID)
+		self.StateChanged:Fire(CurrentState, StateID)
+	else
+		self:Start(StateID)
+	end
+end
+
+-- Gets the enviorment or a specific variable
 function SpeciesMetaData:GetEnviorment(EnvVar: string?)
 	if EnvVar then
 		assert(
@@ -186,12 +220,13 @@ function SpeciesMetaData:GetEnviorment(EnvVar: string?)
 				EnvVar
 			)
 		)
-		return self.FunctionEnvVars[EnvVar]
+		return if self.FunctionEnvVars[EnvVar] == "nil" then nil else self.FunctionEnvVars[EnvVar]
 	else
 		return self.FunctionEnvVars
 	end
 end
 
+-- Sets a private property of the species
 function SpeciesMetaData:SetProperty(Property: string, Value: any)
 	assert(
 		self.InternalProperties[Property],
@@ -201,7 +236,8 @@ function SpeciesMetaData:SetProperty(Property: string, Value: any)
 	self.InternalProperties[Property] = Value or "nil"
 end
 
-function SpeciesMetaData:GetProperty(Property: string): any 
+-- Gets the Private property table or the specific property
+function SpeciesMetaData:GetProperty(Property: string): any
 	assert(
 		self.InternalProperties[Property],
 		string.format("%s Attempt to Assign nil property doesnt exist Species ID: %s", SERVICE_NAME, self.SpeciesID)
@@ -217,6 +253,7 @@ local EcosystemMetaData = {}
 EcosystemMetaData.__index = EcosystemMetaData
 EcosystemMetaData.ClassName = "Ecosystem"
 
+-- used to initialize a state and a function to bind it to
 function EcosystemMetaData:AddStateAndFeature(State: string, Feature: () -> string)
 	assert(EasyType(State) == "string", string.format("%s %s's State must be a string", SERVICE_NAME, self.EcosystemID))
 	assert(
@@ -228,6 +265,7 @@ function EcosystemMetaData:AddStateAndFeature(State: string, Feature: () -> stri
 	self.States[State] = Feature
 end
 
+-- initializes a private property that will be cloned to the species
 function EcosystemMetaData:AddCustomProperty(PropertyIndex: string, InitialValue: any?)
 	assert(
 		EasyType(PropertyIndex) == "string",
@@ -238,21 +276,22 @@ function EcosystemMetaData:AddCustomProperty(PropertyIndex: string, InitialValue
 	self.InternalProperties[PropertyIndex] = InitialValue or "init"
 end
 
+-- initialize an enviorment variables that is global to the controller and its species
 function EcosystemMetaData:SetFunctionEnviorment(PropertyIndex: string, InitialValue: any?)
 	assert(
 		EasyType(PropertyIndex) == "string",
 		string.format("%s %s's PropertyIndex must be a string", SERVICE_NAME, self.EcosystemID)
 	)
-	assert(
+	--[[assert(
 		InitialValue ~= nil,
 		string.format("%s %s's InitialValue cannot be initalized as nil", SERVICE_NAME, self.EcosystemID)
-	)
+	)]]
 	assert(not self.Frozen, string.format("%s %s is primed and read only", SERVICE_NAME, self.EcosystemID))
 
 	self.FunctionEnvVars[PropertyIndex] = InitialValue or "init"
 end
 
--- Turns the ecosystem into read only and cannot assign any new properties, enviorment varibles and states/functions
+-- Turns the ecosystem into read only and cannot assign any new properties, enviorment variables and states/functions
 function EcosystemMetaData:Freeze()
 	assert(
 		not self.Frozen,
@@ -262,6 +301,7 @@ function EcosystemMetaData:Freeze()
 	self.Frozen = true
 end
 
+-- Updates a enviorment variable during runtime
 function EcosystemMetaData:UpdateEnvVar(EnvVar: string, Data: any?)
 	assert(
 		(self :: InternalEcosystem).FunctionEnvVars[EnvVar],
@@ -273,11 +313,10 @@ function EcosystemMetaData:UpdateEnvVar(EnvVar: string, Data: any?)
 	self.FunctionEnvVars[EnvVar] = Data or "nil"
 	--self.__EnvUpdate:Fire(EnviormentUpdateKey, Data, if OldData == "nil" then nil else OldData)
 
-	for _, s: InternalSpecies in (self :: InternalEcosystem).SpeciesBinded do
-		s.EnvUpdate:Fire(EnvVar, Data, if OldData == "nil" then nil else OldData)
-	end
+	self.EnvUpdate:Fire(EnvVar, Data, if OldData == "nil" then nil else OldData)
 end
 
+-- Gets the enviorment or a specific variable
 function EcosystemMetaData:GetEnviorment(EnvVar: string?)
 	if EnvVar then
 		assert(
@@ -288,9 +327,18 @@ function EcosystemMetaData:GetEnviorment(EnvVar: string?)
 				EnvVar
 			)
 		)
-		return self.FunctionEnvVars[EnvVar]
+		return if self.FunctionEnvVars[EnvVar] == "nil" then nil else self.FunctionEnvVars[EnvVar]
 	else
 		return self.FunctionEnvVars
+	end
+end
+
+-- Forces all species connected to the controller to all piviot to a new state
+function EcosystemMetaData:ForceAllStates(StateID: string)
+	assert(self.States[StateID], string.format("%s attempt to get unknown state %s", SERVICE_NAME, StateID))
+
+	for ID: string, Specie: InternalSpecies in (self :: InternalEcosystem).SpeciesBinded do
+		Specie:ForceState(StateID)
 	end
 end
 
@@ -299,6 +347,7 @@ end
 
 local Ecosystem = {}
 
+-- Constructs a Ecosystem. (Controller class)
 function Ecosystem.NewEcosystem(Identifyer: string): Ecosystem
 	assert(
 		not EcosystemCache[Identifyer],
@@ -320,12 +369,15 @@ function Ecosystem.NewEcosystem(Identifyer: string): Ecosystem
 	self.FunctionEnvVars = {} -- global
 	self.Frozen = false -- Cannot be undone
 
+	self.EnvUpdate = TramService.NewTram(nil, nil, nil, true)
+
 	setmetatable(self, EcosystemMetaData)
 
 	EcosystemCache[Identifyer] = self :: any
 	return self :: Ecosystem
 end
 
+-- Constructs a Specie. (A runtime class)
 function Ecosystem.NewSpecies(Identifyer: string, ObjectToBind: Instance?)
 	assert(
 		EcosystemCache[Identifyer],
@@ -360,7 +412,6 @@ function Ecosystem.NewSpecies(Identifyer: string, ObjectToBind: Instance?)
 
 	self.FunctionEnvVars = Parent.FunctionEnvVars
 
-	self.EnvUpdate = TramService.NewTram(nil, nil, nil, true)
 	self.StateChanged = TramService.NewTram(nil, nil, nil, true)
 
 	setmetatable(self, SpeciesMetaData)

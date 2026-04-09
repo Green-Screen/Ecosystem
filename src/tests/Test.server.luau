@@ -9,18 +9,27 @@ TestEcosystem:AddStateAndFeature("idle", function(CurrentSpecies: Ecosystem.Spec
 	-- Do static lines up here stuff that only needs to be assigned once at the start of a state
 
 	while true do
-		warn("Run")
+		warn("Run", StateFrom)
+		warn(CurrentSpecies.CurrentState)
 		-- All main loop logic should happen inside
-		task.wait(5)
+		--task.wait(5)
+		task.wait()
 
 		if math.random(1, 2) == 1 then
 			print("1")
 			return "Next State 1" -- Returns the next State string
 		else
-			print("2")
-			return "Next State 2" -- ill add better type annotations
+			--print("2")
+			return "Next State 1" -- ill add better type annotations
 		end
 	end
+end)
+
+TestEcosystem:AddStateAndFeature("Next State 1", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string 
+	print("stop")
+	-- Should close and cause the thread to be garbage collected
+	--CurrentSpecies:Stop()
+	return "Stop"
 end)
 
 -- A property that is linked to the SPECIES
@@ -68,11 +77,26 @@ local TestSpecies = Ecosystem.NewSpecies("Test")
 -- Gets data assigned
 print(TestSpecies, getmetatable(TestSpecies))
 
+TestSpecies.StateChanged:Connect(function(a0: string, a1: string)
+	print("Event:", a0, a1)
+end)
+
 -- Starts running cycle
 TestSpecies:Start("idle")
 
 -- Errors as start has been called already
-TestSpecies:Start("idle")
+--TestSpecies:Start("idle")
 
 -- Stops the running thread and closes all current calls
-TestSpecies:Stop()
+--TestSpecies:Stop()
+
+--task.wait(1)
+
+-- Handeling thread is disabled the frame after called
+task.wait()
+print(TestSpecies.HandelingThread)
+
+task.wait(1)
+
+-- Restarts the Species after it closed itself
+TestSpecies:Start("idle")

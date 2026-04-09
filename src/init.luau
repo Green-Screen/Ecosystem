@@ -1,4 +1,4 @@
--- Ecosystem V 2.0
+-- Ecosystem V 2.1
 -- @Patriots8800
 
 --!strict
@@ -7,9 +7,9 @@
 
 -- 							[[ Dependencies ]]
 
-local EasyType = require("@self/Dependencies/EasyType")
-local SmartTable = require("@self/Dependencies/SmartTable")
-local TramService = require("@self/Dependencies/TramService")
+local EasyType = require("./Ecosystem/Dependencies/EasyType")
+local SmartTable = require("./Ecosystem/Dependencies/SmartTable")
+local TramService = require("./Ecosystem/Dependencies/TramService")
 ----------------------------------------------------------------------------------------------
 
 -- 							[[ Types ]]
@@ -96,8 +96,8 @@ type IS = setmetatable<
 		SpeciesID: string,
 
 		States: { [string]: FunctionState },
-		InternalProperties: { [string]: any? },
-		FunctionEnvVars: { [string]: any? },
+		InternalProperties: { [string]: any },
+		FunctionEnvVars: { [string]: any },
 
 		HandelingThread: thread,
 		CurrentState: string,
@@ -172,13 +172,18 @@ function SpeciesMetaData:Start(StateID: string)
 	)
 
 	self.CurrentState = StateID
+	local OldState = nil
+
 	self.HandelingThread = task.spawn(function()
 		while true do
-			local OldState = self.CurrentState
 			local NextState: string = StartingFunction(self :: Species, OldState)
+			if NextState == "Stop" then
+				self:Stop()
+			end
+
+			OldState = self.CurrentState
 
 			self.CurrentState = NextState
-
 			StartingFunction = self.States[NextState]
 			-- Broadcast update
 			self.StateChanged:Fire(OldState, NextState)
@@ -192,7 +197,14 @@ function SpeciesMetaData:Stop()
 		self.HandelingThread,
 		string.format("%s Attempt to stop Species that is not running with ID: %s", SERVICE_NAME, self.SpeciesID)
 	)
-	task.cancel(self.HandelingThread)
+	if self.HandelingThread == coroutine.running() then
+		-- Deletes the reference allowing the thread to be garbage collected while yielding
+		self.HandelingThread = nil :: never
+		return coroutine.yield()
+	else
+		task.cancel(self.HandelingThread)
+		self.HandelingThread = nil :: never
+	end
 end
 
 -- Forces the state loop to stop and restart on the new state
@@ -220,7 +232,11 @@ function SpeciesMetaData:GetEnviorment(EnvVar: string?)
 				EnvVar
 			)
 		)
-		return if self.FunctionEnvVars[EnvVar] == "nil" then nil else self.FunctionEnvVars[EnvVar]
+		if self.FunctionEnvVars[EnvVar] == "nil" then
+			return nil
+		else
+			return self.FunctionEnvVars[EnvVar]
+		end
 	else
 		return self.FunctionEnvVars
 	end
@@ -261,6 +277,10 @@ function EcosystemMetaData:AddStateAndFeature(State: string, Feature: () -> stri
 		string.format("%s %s's Feature must be a function", SERVICE_NAME, self.EcosystemID)
 	)
 	assert(not self.Frozen, string.format("%s %s is primed and read only", SERVICE_NAME, self.EcosystemID))
+
+	if State == "Stop" then
+		error(string.format("%s Invalid State name: %s", SERVICE_NAME, State))
+	end
 
 	self.States[State] = Feature
 end
@@ -327,7 +347,11 @@ function EcosystemMetaData:GetEnviorment(EnvVar: string?)
 				EnvVar
 			)
 		)
-		return if self.FunctionEnvVars[EnvVar] == "nil" then nil else self.FunctionEnvVars[EnvVar]
+		if self.FunctionEnvVars[EnvVar] == "nil" then
+			return nil
+		else
+			return self.FunctionEnvVars[EnvVar]
+		end
 	else
 		return self.FunctionEnvVars
 	end

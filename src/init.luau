@@ -11,7 +11,6 @@ local EasyType = require("./Ecosystem/Dependencies/EasyType")
 local SmartTable = require("./Ecosystem/Dependencies/SmartTable")
 local TramService = require("./Ecosystem/Dependencies/TramService")
 ----------------------------------------------------------------------------------------------
-
 -- 							[[ Types ]]
 
 type FunctionState = (CurrentSpecies: Species, StateFrom: string) -> string

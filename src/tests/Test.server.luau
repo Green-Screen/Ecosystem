@@ -25,7 +25,7 @@ TestEcosystem:AddStateAndFeature("idle", function(CurrentSpecies: Ecosystem.Spec
 	end
 end)
 
-TestEcosystem:AddStateAndFeature("Next State 1", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string 
+TestEcosystem:AddStateAndFeature("Next State 1", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
 	print("stop")
 	-- Should close and cause the thread to be garbage collected
 	--CurrentSpecies:Stop()

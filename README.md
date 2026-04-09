@@ -5,7 +5,7 @@
 Ecosystem is a FSM built for easy overall control ment to act as a manager
 and dispatcher to control many different things specializing in AI
 
-### **Make sure you set UseNewLuauTypeSolver to enabled to get proper intellisense**
+### **Make sure you set UseNewLuauTypeSolver to enabled in workspace properties to get proper intellisense**
 
 ### **Features:**
 

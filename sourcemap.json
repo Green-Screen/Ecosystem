@@ -25,17 +25,17 @@
                   "className": "Folder",
                   "children": [
                     {
-                      "name": "CategoryService",
-                      "className": "ModuleScript",
-                      "filePaths": [
-                        "src/Dependencies/CategoryService.luau"
-                      ]
-                    },
-                    {
                       "name": "EasyType",
                       "className": "ModuleScript",
                       "filePaths": [
                         "src/Dependencies/EasyType.luau"
+                      ]
+                    },
+                    {
+                      "name": "SecureClasses",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "src/Dependencies/SecureClasses.luau"
                       ]
                     },
                     {
@@ -77,6 +77,13 @@
                       "className": "Script",
                       "filePaths": [
                         "src/tests/Test3.server.luau"
+                      ]
+                    },
+                    {
+                      "name": "Test4",
+                      "className": "Script",
+                      "filePaths": [
+                        "src/tests/Test4.server.luau"
                       ]
                     }
                   ]

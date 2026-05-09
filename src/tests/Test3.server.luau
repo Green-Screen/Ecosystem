@@ -1,4 +1,5 @@
-local Players = game:GetService("Players")
+--!nolint ImplicitReturn
+
 local Ecosystem = require("../")
 local TramService = require("../Dependencies/TramService")
 
@@ -69,7 +70,7 @@ local function Swap()
 end
 
 TramService.NewTram("Sig"):Connect(function()
-	NPCController:UpdateEnvVar("SwitchStates", Swap())
+	NPCController:UpdateFunctionEnviorment("SwitchStates", Swap())
 	print("Signaled")
 end)
 
@@ -80,11 +81,11 @@ Sp1.StateChanged:Connect(function(a0: string, a1: string): ...any?
 	print("StateFrom:", a0, "\nNewState:", a1)
 end)
 
-NPCController.EnvUpdate:Connect(function(a0: string, a1, a2): ...any?
+NPCController.EnviormentUpdate:Connect(function(a0: string, a1, a2): ...any?
 	print("EnvUpdated:", a0, "\nNewData:", a1, "\nOldData:", a2)
 end)
 
 task.wait(5)
 
 NPCController:ForceAllStates("Stun")
-NPCController:UpdateEnvVar("SwitchStates", Swap())
+NPCController:UpdateFunctionEnviorment("SwitchStates", Swap())

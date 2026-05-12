@@ -32,13 +32,6 @@
                       ]
                     },
                     {
-                      "name": "SecureClasses",
-                      "className": "ModuleScript",
-                      "filePaths": [
-                        "src/Dependencies/SecureClasses.luau"
-                      ]
-                    },
-                    {
                       "name": "SmartTable",
                       "className": "ModuleScript",
                       "filePaths": [
@@ -50,6 +43,13 @@
                       "className": "ModuleScript",
                       "filePaths": [
                         "src/Dependencies/TramService.luau"
+                      ]
+                    },
+                    {
+                      "name": "SecureClasses",
+                      "className": "ModuleScript",
+                      "filePaths": [
+                        "src/Dependencies/SecureClasses.luau"
                       ]
                     }
                   ]

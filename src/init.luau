@@ -177,12 +177,25 @@ end
 local SpeciesMetaData = {}
 SpeciesMetaData.ClassName = "Species"
 SpeciesMetaData.__typeKey = SpeciesMetatableKey
-SpeciesMetaData.__destroy = function(self: ISpecies, Nuke: boolean)
-	-- Finish implementing __destroy for both classes
+SpeciesMetaData.__destroy = function(self: ISpecies, Nuke: boolean, EcosystemDestroy:boolean?)
+	-- Removes the tram object
 	self.StateChanged:DestroyLocal()
+
+	-- Deletes pointer
 	self.StateChanged = nil :: never
 
-	(EcosystemCache[self.AttachedEcosystemID] :: any)[EcosystemMetatableKey]._SpeciesBinded[self.SpeciesID] = nil
+	-- Allows the gc to collect the pointer BUT NOT clear the memory
+	self._FunctionEnvVars = nil :: never
+	self._States = nil :: never
+	self._InternalProperties = nil :: never
+
+	-- Removes species from ecosystem [Binded] cache
+	if EcosystemDestroy then
+		EcosystemCache[self.AttachedEcosystemID]._SpeciesBinded[self.SpeciesID] = nil
+	else
+		((EcosystemCache[self.AttachedEcosystemID] :: any)[EcosystemMetatableKey] :: IEcosystem)._SpeciesBinded[self.SpeciesID] = nil
+	end
+
 end
 
 -- Starts the state loop
@@ -305,8 +318,20 @@ local EcosystemMetaData = {}
 EcosystemMetaData.ClassName = "Ecosystem"
 EcosystemMetaData.__typeKey = EcosystemMetatableKey
 EcosystemMetaData.__destroy = function(self: IEcosystem, Nuke: boolean)
-	-- Finish implementing __destroy for both classes
+	-- Removes the tram
+	self.EnviormentUpdate:DestroyLocal()
 
+	-- Removes the cahced as they are complex objects
+	for ID:string, Specie:ISpecies in self._SpeciesBinded do
+		(Specie :: any):Destroy(Nuke, true)
+	end
+
+	-- Removes reference to help SmartClean
+	self.EnviormentUpdate = nil :: never
+	self._SpeciesBinded = nil :: never
+
+	-- Removes cache reference
+	EcosystemCache[self.EcosystemID] = nil
 end
 
 -- used to initialize a state and a function to bind it to
@@ -412,6 +437,10 @@ function EcosystemMetaData:ForceAllStates(StateID: string)
 	end
 end
 
+function EcosystemMetaData:GetCache()
+	return self[EcosystemMetatableKey]._SpeciesBinded
+end
+
 ----------------------------------------------------------------------------------------------
 --					 		[[ Public service (constructor) ]]
 
@@ -478,7 +507,7 @@ function Ecosystem.NewSpecies(Identifyer: string, ObjectToBind: Instance?)
 	self.SpeciesID = SmartTable.Helper.GenerateUUID()
 
 	self._States = EcMT._States
-	self._InternalProperties = table.clone(EcMT._InternalProperties)
+	self._InternalProperties = EcMT._InternalProperties
 
 	self.CurrentState = "none"
 	self.ObjectBinded = ObjectToBind
@@ -529,6 +558,10 @@ function Ecosystem:GetEcosystemFromSpecie(S: Species): Ecosystem?
 	assert(EasyType(S) == "Species", "Expected Species")
 	local Ecosystem = EcosystemCache[S.AttachedEcosystemID] :: Ecosystem
 	return Ecosystem
+end
+
+function Ecosystem:GetCache()
+	return EcosystemCache
 end
 
 return Ecosystem

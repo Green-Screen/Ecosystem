@@ -47,29 +47,7 @@ end)
 
 NPCController:Freeze()
 
-local S = Ecosystem.NewSpecies("Wanderer", Object1)
-S:Start("Walk")
-
-local T = S.StateChanged
-
-S.StateChanged:Connect(function(a0: string?, a1: string): ...any?
-	print("Changed")
-end)
-
-task.wait(6)
-
-print(S, getmetatable(S))
-
-warn("Destroying")
-S:Destroy(true)
-
-print(S, getmetatable(S))
-
-T:Fire()
-
-print(T)
-
---[[local function SetNWO(M:Instance)
+local function SetNWO(M:Instance)
 	for _, v in M:GetDescendants() do
 		if v:IsA("BasePart") then
 			v:SetNetworkOwner(nil)
@@ -77,7 +55,7 @@ print(T)
 	end
 end
 
-for i = 1, 1 do
+for i = 1, 100 do
 	local TmpOBJ = Object1:Clone()
 
 	local S = Ecosystem.NewSpecies("Wanderer", TmpOBJ)
@@ -87,6 +65,10 @@ for i = 1, 1 do
 	SetNWO(TmpOBJ)
 
 	S:Start("Walk")
+
+	S.StateChanged:Connect(function(a0: string?, a1: string): ...any? 
+		print(`Oldstate: {a0}, NewState: {a1}`)
+	end)
 end
 
 local current = "Walk"
@@ -110,9 +92,35 @@ task.spawn(function()
 	end
 end)
 
+local function Len(T)
+	local Count = 0
+	for _, __ in T do
+		Count += 1
+	end
+	return Count
+end
+
+Target:GetPropertyChangedSignal("BrickColor"):Connect(function() 
+	if Target.BrickColor == BrickColor.Green() then
+		local Con = Ecosystem:GetSpeciesFromBindedInstance(script.Parent.Parent.Parent.TestObjects["ME"] :: Instance) :: Ecosystem.Species
+
+	print(`Controller for {Con.AttachedEcosystemID} With ID {Con.SpeciesID} running current state {Con.CurrentState} With object {Con.ObjectBinded}\n\n NOW STOPPING`)
+	
+	--Con:Stop()
+
+	Con:Destroy()
+
+	print(Con, getmetatable(Con))
+	print(NPCController, getmetatable(NPCController))
+
+	else
+		NPCController:Destroy()
+	end
+end)
 
 
-local Con = Ecosystem:GetSpeciesFromBindedInstance(script.Parent.Parent.Parent.TestObjects["T"] :: Instance) :: Ecosystem.Species
+
+--[[local Con = Ecosystem:GetSpeciesFromBindedInstance(script.Parent.Parent.Parent.TestObjects["T"] :: Instance) :: Ecosystem.Species
 
 print(`Controller for {Con.AttachedEcosystemID} With ID {Con.SpeciesID} running current state {Con.CurrentState} With object {Con.ObjectBinded}\n\n NOW STOPPING`)
 
@@ -122,4 +130,5 @@ Con:Stop()
 
 Con:Destroy(true)
 
-print(Con, getmetatable(Con))]]
+print(Con, getmetatable(Con))
+]]

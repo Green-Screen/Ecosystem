@@ -14,6 +14,88 @@ local TramService = require("./Ecosystem/Dependencies/TramService")
 ----------------------------------------------------------------------------------------------
 -- 							[[ Types ]]
 
+--[=[
+	@class Ecosystem
+	The main controller class, this object acts as the leader and template for all subclasse [Species]() and retains its control during runtime.
+]=]
+
+--[=[
+	@within Ecosystem
+	@external SecuredClass https://green-screen.github.io/SecureClasses/api/SecuredMetatable#WrappedMetatable
+	@type Ecosystem SecuredClass <Ecosystem>
+	The `Ecosystem` object is wrapped inside of the `SecuredClass` this provides protections such as proper read-only properties + more
+]=]
+
+--[=[
+	@within Ecosystem
+	@type FunctionState (CurrentSpecies: Species, StateFrom: string?) -> string
+
+	:::caution Return
+	A feature function **MUST** return a valid `StateID` string for the next state to run or **Stop** to stop close the current running thread
+	:::
+]=]
+
+--[=[
+	@within Ecosystem
+	@prop EcosystemID string
+	@readonly
+	The identifier string that is passes in the `NewEcosystem` contstructor
+]=]
+
+--[=[
+	@within Ecosystem
+	@prop Frozen Boolean
+	@readonly
+	A boolean that represents if the Ecosystem template is done being constructed and is ready to have Specie subclasses created from it.
+]=]
+
+--[=[
+	@within Ecosystem
+	@prop ClassName string
+	@readonly
+	The class of the object `Ecosystem`
+]=]
+
+--[=[
+	@within Ecosystem
+	@prop _States { [string]: FunctionState }
+	@readonly
+	@private
+	The `States` template container
+]=]
+
+--[=[
+	@within Ecosystem
+	@prop _InternalProperties { [string]: any? }
+	@readonly
+	@private
+	The `Properties` template container __Local to the Species object__
+]=]
+
+--[=[
+	@within Ecosystem
+	@prop _FunctionEnvVars { [string]: any? }
+	@readonly
+	@private
+	The `Enviorment` container __Global to the Ecosystem object__
+]=]
+
+--[=[
+	@within Ecosystem
+	@prop _SpeciesBinded { [string]: Species }
+	@readonly
+	@private
+	A dictionary of all the species binded to the ecosystem __index is the speciesID__
+]=]
+
+--[=[
+	@within Ecosystem
+	@prop EnviormentUpdate Tram<EnviormentVariableIndex:string, NewData:any, OldData:any)>
+	@readonly
+	@tag Signal
+	A `tram` signal class that fires whenever a enviorment __Global__ variable is changed in the order of `(EnviormentVariableIndex:string, NewData:any, OldData:any)`
+]=]
+
 type FunctionState = (CurrentSpecies: Species, StateFrom: string?) -> string
 
 type IEcosystem = {
@@ -46,6 +128,118 @@ type IEcosystem = {
 	ForceAllStates: (self: IEcosystem, StateID: string) -> (),
 }
 
+export type Ecosystem = SecureClasses.WrappedMetatable<{
+	-- [[Properties]]
+
+	ClassName: string,
+
+	EcosystemID: string,
+	Frozen: boolean,
+
+	-- [[Signals]]
+
+	-- EnvVar NewData, OldData
+	EnviormentUpdate: TramService.Tram<string, any, any>,
+
+	-- [[Methods]]
+
+	AddStateAndFeature: (self: Ecosystem, State: string, Feature: FunctionState) -> (),
+	AddCustomProperty: (self: Ecosystem, PropertyIndex: string, InitialValue: any?) -> (),
+	SetFunctionEnviorment: (self: Ecosystem, PropertyIndex: string, InitialValue: any) -> (),
+
+	Freeze: (self: Ecosystem) -> (),
+
+	UpdateFunctionEnviorment: (self: Ecosystem, EnvVar: string, Data: any) -> (),
+
+	ForceAllStates: (self: Ecosystem, StateID: string) -> (),
+}>
+
+--[=[
+	@class Species
+	The runtime class of Ecosystem. A specie clones properties from Ecosystem and runs them individually with the ability to share data among other species classes through the `Ecosystem` controller
+]=]
+
+--[=[
+	@within Species
+	@type Species SecuredClass <Species>
+	The `Ecosystem` object is wrapped inside of the `SecuredClass` this provides protections such as proper read-only properties + more
+]=]
+
+--[=[
+	@within Species
+	@prop SpeciesID string
+	@readonly
+	The UUID that is assigned when the `Species` object is created 
+]=]
+
+--[=[
+	@within Species
+	@prop AttachedEcosystemID string
+	@readonly
+	The identifier string that is passes in the `NewSpecies` constructor that matches the `Ecosystem` that you want to bind it to.
+]=]
+
+--[=[
+	@within Species
+	@prop ClassName string
+	@readonly
+	The class of the object `Species`
+]=]
+
+--[=[
+	@within Species
+	@prop CurrentState string
+	@readonly
+	The current running state ID `nil` if non is running
+]=]
+
+--[=[
+	@within Species
+	@prop ObjectBinded Instance?
+	@readonly
+	A optional paramater that allows you to link a instance to the species object
+]=]
+
+--[=[
+	@within Species
+	@prop _States { [string]: FunctionState }
+	@readonly
+	@private
+	The `States` container that points to the `_States` dictionary of the Ecosystem controller
+]=]
+
+--[=[
+	@within Species
+	@prop _InternalProperties { [string]: any? }
+	@readonly
+	@private
+	The `Properties` container that points to the `_InternalProperties` dictionary of the Ecosystem controller __Local to the Species object__
+]=]
+
+--[=[
+	@within Species
+	@prop _FunctionEnvVars { [string]: any? }
+	@readonly
+	@private
+	The `Enviorment` container that points to the `_FunctionEnvVars` dictionary of the Ecosystem controller __Global to the Ecosystem object__
+]=]
+
+--[=[
+	@within Species
+	@prop _HandlingThread thread
+	@readonly
+	@private
+	The thread that runs the different states stored in `_States`
+]=]
+
+--[=[
+	@within Species
+	@prop StateChanged Tram<StateFrom:string, StateTo:string)>
+	@readonly
+	@tag Signal
+	A `tram` signal class that fires whenever a State is changed in the order of `(StateFrom:string, StateTo:string)`
+]=]
+
 type ISpecies = {
 	__index: ISpecies,
 
@@ -77,32 +271,6 @@ type ISpecies = {
 	SetProperty: (self: ISpecies, Property: string, Value: any) -> (),
 	GetProperty: (self: ISpecies, Property: string) -> any,
 }
-
-export type Ecosystem = SecureClasses.WrappedMetatable<{
-	-- [[Properties]]
-
-	ClassName: string,
-
-	EcosystemID: string,
-	Frozen: boolean,
-
-	-- [[Signals]]
-
-	-- EnvVar NewData, OldData
-	EnviormentUpdate: TramService.Tram<string, any, any>,
-
-	-- [[Methods]]
-
-	AddStateAndFeature: (self: Ecosystem, State: string, Feature: FunctionState) -> (),
-	AddCustomProperty: (self: Ecosystem, PropertyIndex: string, InitialValue: any?) -> (),
-	SetFunctionEnviorment: (self: Ecosystem, PropertyIndex: string, InitialValue: any) -> (),
-
-	Freeze: (self: Ecosystem) -> (),
-
-	UpdateFunctionEnviorment: (self: Ecosystem, EnvVar: string, Data: any) -> (),
-
-	ForceAllStates: (self: Ecosystem, StateID: string) -> (),
-}>
 
 export type Species = SecureClasses.WrappedMetatable<{
 	-- [[Properties]]
@@ -177,6 +345,8 @@ end
 local SpeciesMetaData = {}
 SpeciesMetaData.ClassName = "Species"
 SpeciesMetaData.__typeKey = SpeciesMetatableKey
+
+-- Destroy function of the species class
 SpeciesMetaData.__destroy = function(self: ISpecies, Nuke: boolean, EcosystemDestroy:boolean?)
 	-- Removes the tram object
 	self.StateChanged:DestroyLocal()
@@ -197,6 +367,46 @@ SpeciesMetaData.__destroy = function(self: ISpecies, Nuke: boolean, EcosystemDes
 	end
 
 end
+
+--[=[
+	@within Species
+	@method Start
+
+	@param StateID string -- must be a valid State that was assigned in the ecosystem template
+
+	Starts the FSM runtime for the species called on passing the first StateID as the initial state to run.
+
+	### Example:
+	```lua
+	local NPCController = Ecosystem.NewEcosystem("JumpingNPC")
+
+	NPCController:AddStateAndFeature("Jump10Times", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		local Count = 0
+		local CurrentObjectHumanoid:Humanoid = CurrentSpecies.ObjectBinded.Humanoid
+
+		while task.wait(0.1) do
+			if not CurrentObjectHumanoid.Jump then
+				CurrentObjectHumanoid.Jump = true
+				Count += 1
+			end
+			if Count >= 10 then
+				return "NextState" -- The next StateID that should run
+			end
+		end
+	end)
+
+	-- Freezes the controller making it read-only
+	NPCController:Freeze()
+
+	-- Creates a Species Class from the Ecosystem template
+	local JumpingNPC = Ecosystem.NewSpecies("JumpingNPC", NPCInstance)
+
+	-- Begins cycle
+	JumpingNPC:Start("Jump10Times")
+
+	```
+]=]
+
 
 -- Starts the state loop
 function SpeciesMetaData:Start(StateID: string)
@@ -234,6 +444,86 @@ function SpeciesMetaData:Start(StateID: string)
 	end)
 end
 
+--[=[
+	@within Species
+	@method Stop
+
+	Stops the current Species runtime instantly by closing the thread
+
+	### Example:
+	```lua
+	local NPCController = Ecosystem.NewEcosystem("JumpingNPC")
+	local HasJumped10Times = false
+
+	NPCController:AddStateAndFeature("Jump10Times", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		local Count = 0
+		local CurrentObjectHumanoid:Humanoid = CurrentSpecies.ObjectBinded.Humanoid
+
+		while task.wait(0.1) do
+			if not CurrentObjectHumanoid.Jump then
+				CurrentObjectHumanoid.Jump = true
+				Count += 1
+			end
+			if Count >= 10 then
+				HasJumped10Times = true
+			end
+		end
+	end)
+
+	-- Freezes the controller making it read-only
+	NPCController:Freeze()
+
+	-- Creates a Species Class from the Ecosystem template
+	local JumpingNPC = Ecosystem.NewSpecies("JumpingNPC", NPCInstance)
+
+	-- Begins cycle
+	JumpingNPC:Start("Jump10Times")
+
+	while task.wait() do
+		if HasJumped10Times then
+			-- Stops the running species instantly
+			JumpingNPC:Stop()
+			break
+		end
+	end
+
+	```
+
+	## Or alternatively:
+
+	```lua
+	local NPCController = Ecosystem.NewEcosystem("JumpingNPC")
+
+	NPCController:AddStateAndFeature("Jump10Times", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		local Count = 0
+		local CurrentObjectHumanoid:Humanoid = CurrentSpecies.ObjectBinded.Humanoid
+
+		while task.wait(0.1) do
+			if not CurrentObjectHumanoid.Jump then
+				CurrentObjectHumanoid.Jump = true
+				Count += 1
+			end
+			if Count >= 10 then
+				-- Returning "Stop" will cause the running thread to yield and gc
+				-- This method DOES NOT guarantee instant results as it is 
+				-- dependent on the current cycle of the GC
+				return "Stop"
+			end
+		end
+	end)
+
+	-- Freezes the controller making it read-only
+	NPCController:Freeze()
+
+	-- Creates a Species Class from the Ecosystem template
+	local JumpingNPC = Ecosystem.NewSpecies("JumpingNPC", NPCInstance)
+
+	-- Begins cycle
+	JumpingNPC:Start("Jump10Times")
+
+	```
+]=]
+
 -- Stops the state loop
 function SpeciesMetaData:Stop()
 	local SpMT: ISpecies = self[SpeciesMetatableKey]
@@ -252,6 +542,66 @@ function SpeciesMetaData:Stop()
 	end
 end
 
+--[=[
+	@within Species
+	@method ForceState
+
+	@param StateID string -- must be a valid State that was assigned in the ecosystem template
+
+	Forcefully changes the current running state even if a state is mid execution
+
+	### Example:
+	```lua
+	local NPCController = Ecosystem.NewEcosystem("JumpingNPC")
+
+	NPCController:AddStateAndFeature("Jump10Times", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		-- implmentation the same as above
+	end)
+
+	NPCController:AddStateAndFeature("Wander", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		-- implemtation is user definded
+		-- Ex:
+		-- Makes a NPC wander randomly in a 100x100 box around a fixed point
+	end)
+
+	-- Freezes the controller making it read-only
+	NPCController:Freeze()
+
+	-- Creates a Species Class from the Ecosystem template
+	local JumpingNPC = Ecosystem.NewSpecies("JumpingNPC", NPCInstance)
+
+	-- Begins cycle
+	JumpingNPC:Start("Jump10Times")
+
+	task.wait(2)
+
+	-- Forces the wander state
+	JumpingNPC:ForceState("Wander")
+	```
+	## Equal to:
+	```lua
+	local JumpingNPC = Ecosystem.NewSpecies("JumpingNPC", NPCInstance)
+
+	JumpingNPC:Start("Jump10Times")
+
+	task.wait(2)
+
+	JumpingNPC:ForceState("Wander")
+
+	-- Or Simplily
+
+	JumpingNPC:Start("Jump10Times")
+
+	task.wait(2)
+
+	-- Stops the current state
+	JumpingNPC:Stop()
+	
+	-- CAUTION: Adding a wait my be necessary due to task scheduler priorities
+	JumpingNPC:Start("Wander")
+	```
+]=]
+
 -- Forces the state loop to stop and restart on the new state
 function SpeciesMetaData:ForceState(StateID: string)
 	local SpMT: ISpecies = self[SpeciesMetatableKey]
@@ -267,6 +617,36 @@ function SpeciesMetaData:ForceState(StateID: string)
 		(self :: ISpecies):Start(StateID)
 	end
 end
+
+--[=[
+	@within Species
+	@method GetEnviorment
+
+	@param EnvVar string -- The index of the enviorment variable
+
+	@return any
+
+	Returns the value of a enviorment variable with the given index
+	
+	### Example:
+	```lua
+	local NPCController = Ecosystem.NewEcosystem("JumpingNPC")
+	NPCController:SetFunctionEnviorment("GlobalVariable", 10) -- Initial value of 10
+
+	NPCController:AddStateAndFeature("Jump10Times", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		print(CurrentSpecies:GetEnviorment("GlobalVariable")) -- 10
+		print(CurrentSpecies:GetEnviorment("GlobalVariable2")) -- nil
+		print(CurrentSpecies:GetEnviorment()) -- The dictionary of enviorment properties
+
+		return "NextState" -- Next state
+	end)
+
+	```
+
+	:::info Read-Only
+	The `Species` object is **NOT** able to write to `EnviormentVariables` only read.
+	:::
+]=]
 
 -- Gets the enviorment or a specific variable
 function SpeciesMetaData:GetEnviorment(EnvVar: string?): any
@@ -286,6 +666,35 @@ function SpeciesMetaData:GetEnviorment(EnvVar: string?): any
 		return SpMT._FunctionEnvVars
 	end
 end
+
+--[=[
+	@within Species
+	@method SetProperty
+
+	@param Property string -- The index of the local property value
+	@param Value any -- the value to be assigned
+
+	Returns the value of a enviorment variable with the given index
+	
+	### Example:
+	```lua
+	local NPCController = Ecosystem.NewEcosystem("JumpingNPC")
+	NPCController:SetFunctionEnviorment("GlobalVariable", 10) -- Initial value of 10
+
+	NPCController:AddStateAndFeature("Jump10Times", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		print(CurrentSpecies:GetEnviorment("GlobalVariable")) -- 10
+		print(CurrentSpecies:GetEnviorment("GlobalVariable2")) -- nil
+		print(CurrentSpecies:GetEnviorment()) -- The dictionary of enviorment properties
+
+		return "NextState" -- Next state
+	end)
+
+	```
+
+	:::info Read-Only
+	The `Species` object is **NOT** able to write to `EnviormentVariables` only read.
+	:::
+]=]
 
 -- Sets a private property of the species
 function SpeciesMetaData:SetProperty(Property: string, Value: any)
@@ -507,11 +916,13 @@ function Ecosystem.NewSpecies(Identifyer: string, ObjectToBind: Instance?)
 	self.SpeciesID = SmartTable.Helper.GenerateUUID()
 
 	self._States = EcMT._States
-	self._InternalProperties = EcMT._InternalProperties
+	-- Clones so it doesnt write to the template table
+	self._InternalProperties = table.clone(EcMT._InternalProperties)
 
 	self.CurrentState = "none"
 	self.ObjectBinded = ObjectToBind
 
+	-- Does not clone allowing the table to be global among all species
 	self._FunctionEnvVars = EcMT._FunctionEnvVars
 
 	self.StateChanged = TramService.NewTram(nil, nil, nil, true)
@@ -554,14 +965,11 @@ function Ecosystem:GetSpeciesFromBindedInstance(I: Instance, Controller: Ecosyst
 	return nil
 end
 
+-- Gets Ecosystem (controller class) from the species object
 function Ecosystem:GetEcosystemFromSpecie(S: Species): Ecosystem?
 	assert(EasyType(S) == "Species", "Expected Species")
 	local Ecosystem = EcosystemCache[S.AttachedEcosystemID] :: Ecosystem
 	return Ecosystem
-end
-
-function Ecosystem:GetCache()
-	return EcosystemCache
 end
 
 return Ecosystem

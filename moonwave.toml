@@ -1,0 +1,35 @@
+title = "Ecosystem"
+changelog = true
+
+# Default
+gitSourceBranch = "main" 
+
+[docusaurus]
+tagline = "A luau FSM built for speed, mass control, and performance all while remaining secure"
+
+[[navbar.items]]
+className = "discord-logo-link"
+href = "https://green-screen.github.io/Portfolio/"
+position = "right"
+title = "Portfolio"
+
+[[navbar.items]]
+href = "https://www.roblox.com/users/432990469/profile"
+label = "Roblox"
+position = "right"
+
+[home]
+enabled = true
+includeReadme = false
+
+[[home.features]]
+description = "FEATURE DESCRIPTION"
+title = "FEATURE 1"
+
+[[home.features]]
+description = "FEATURE DESCRIPTION"
+title = "FEATURE 2"
+
+[[home.features]]
+description = "FEATURE DESCRIPTION"
+title = "FEATURE 3"

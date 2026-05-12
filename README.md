@@ -1,6 +1,6 @@
 # Ecosystem
 
-## Current Version: V 2.1
+## Current Version: V 2.4.0
 
 Ecosystem is a FSM built for easy overall control ment to act as a manager
 and dispatcher to control many different things specializing in AI

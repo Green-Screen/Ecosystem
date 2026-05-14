@@ -673,6 +673,10 @@ end
 	@return any
 
 	Returns the value of a enviorment variable with the given index
+
+	:::info Read-Only
+	The `Species` object is **NOT** able to write to `EnviormentVariables`, only read.
+	:::
 	
 	### Example:
 	```lua
@@ -688,10 +692,6 @@ end
 	end)
 
 	```
-
-	:::info Read-Only
-	The `Species` object is **NOT** able to write to `EnviormentVariables`, only read.
-	:::
 ]=]
 
 -- Gets the enviorment or a specific variable
@@ -809,6 +809,10 @@ EcosystemMetaData.__typeKey = EcosystemMetatableKey
 	@return nil
 
 	Destroys the Species object instantly and sets `Opertable` to nil
+
+	:::caution Recursive
+	Calling destroy on a `Ecosystem` object will cause **ALL** species objects binded to the ecosystem to also be destroyed.
+	:::
 	
 	### Example:
 	```lua
@@ -829,10 +833,6 @@ EcosystemMetaData.__typeKey = EcosystemMetatableKey
 	NPCController:Destroy(true) 
 
 	```
-
-	:::caution Recursive
-	Calling destroy on a `Ecosystem` object will cause **ALL** species objects binded to the ecosystem to also be destroyed.
-	:::
 ]=]
 
 EcosystemMetaData.__destroy = function(self: IEcosystem, Nuke: boolean)
@@ -860,6 +860,14 @@ end
 	@param Feature FunctionState -- The function binded to the StateID
 
 	Adds a new state with the given ID and binds the function to the ID
+
+	:::info Reserved key
+	The string `Stop` is reserved if you want to end the running thread. It is equivalent to calling `CurrentSpecies:Stop()`
+	:::
+
+	:::danger Returns
+	Every state function **MUST** return a valid state ID and a single string. *Note:* this does **NOT** mean you can only return 1 state per feature function you may have conditional statements that return different states to execute next.
+	:::
 	
 	### Example:
 	```lua
@@ -901,14 +909,6 @@ end
 	end)
 
 	```
-
-	:::info Reserved key
-	The string `Stop` is reserved if you want to end the running thread. It is equivalent to calling `CurrentSpecies:Stop()`
-	:::
-
-	:::danger Returns
-	Every state function **MUST** return a valid state ID and a single string. *Note:* this does **NOT** mean you can only return 1 state per feature function you may have conditional statements that return different states to execute next.
-	:::
 ]=]
 
 -- used to initialize a state and a function to bind it to
@@ -937,6 +937,10 @@ end
 	@param InitialValue any -- The initial value
 
 	Adds a new **Local property** to the template with a initial value if passed
+
+	:::info Local
+	All properties created in the `FunctionProperties` are **local** and are independent among every species created. They can only be edited at runtime by the `Species` class
+	:::
 	
 	### Example:
 	```lua
@@ -949,9 +953,6 @@ end
 	NPCController:AddCustomProperty("LocalProperty2")
 
 	```
-	:::info Local
-	All properties created in the `FunctionProperties` are **local** and are independent among every species created. They can only be edited at runtime by the `Species` class
-	:::
 ]=]
 
 -- initializes a private property that will be cloned to the species
@@ -975,6 +976,10 @@ end
 	@param InitialValue any -- The initial value
 
 	Adds a new **Global property** to the template with a initial value if passed
+
+	:::info Global
+	All properties created in the `FunctionEnviorment` are **global** and are shared among every species created. They can only be edited at runtime by the `Ecosystem` class
+	:::
 	
 	### Example:
 	```lua
@@ -987,10 +992,6 @@ end
 	NPCController:SetFunctionEnviorment("GlobalProperty2")
 
 	```
-
-	:::info Global
-	All properties created in the `FunctionEnviorment` are **global** and are shared among every species created. They can only be edited at runtime by the `Ecosystem` class
-	:::
 ]=]
 
 -- initialize an enviorment variables that is global to the controller and its species
@@ -1010,6 +1011,10 @@ end
 	@method Freeze
 
 	"Freezes" the Ecosystem template allowing `Species` objects to be created from it
+
+	:::tip Frozen
+	You must freeze a `Ecosystem` object to create a `Species` object binded to it.
+	:::
 	
 	### Example:
 	```lua
@@ -1028,10 +1033,6 @@ end
 	local Specie1 = Ecosystem.NewSpecies("WanderNPC") -- Returns: Species object from Ecosystem
 
 	```
-
-	:::tip Frozen
-	You must freeze a `Ecosystem` object to create a `Species` object binded to it.
-	:::
 ]=]
 
 -- Turns the ecosystem into read only and cannot assign any new properties, enviorment variables and states/functions
@@ -1045,6 +1046,54 @@ function EcosystemMetaData:Freeze()
 
 	EcMT.Frozen = true
 end
+
+--[=[
+	@within Ecosystem
+	@method UpdateFunctionEnviorment
+
+	@param EnvVar string -- The index of the Global property
+	@param Data any -- The new data
+
+	Updates the **global** `Ecosystem` dictionary for all binded and future `Species` objects
+
+	:::info Signal
+	Running this function will cause the [EnviormentUpdate](#EnviormentUpdate) signal to broadcast
+	:::
+
+	:::tip Global
+	`UpdateFunctionEnviorment` will update the **GLOBAL** dictionary ie: all species will receive the new data instantly
+	:::
+	
+	### Example:
+	```lua
+	local NPCController = Ecosystem.NewEcosystem("WanderNPC")
+	NPCController:SetFunctionEnviorment("MovementSpeed", 16) -- Default value of 16
+
+	-- State Walk
+	NPCController:AddStateAndFeature("Wander", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		local CurrentObjectHumanoid:Humanoid = CurrentSpecies.ObjectBinded.Humanoid
+		local HRP:BasePart = CurrentSpecies.ObjectBinded.HumanoidRootPart
+
+		while task.wait(1) do
+			-- Updates the walkspeed to the global attribute value
+			CurrentObjectHumanoid.WalkSpeed = CurrentSpecies:GetEnviorment("MovementSpeed")
+
+			-- Move to a random position with a 50 stud box every second
+			CurrentObjectHumanoid:MoveTo(math.random(-50,50) + HRP.position.X, 0, math.random(-50, 50) + HRP.position.Z)
+		end
+	end)
+
+	local Species = Ecosystem.NewSpecies("WanderNPC", NPCModel)
+
+	-- Starts the runtime loop
+	Species:Start("Wander")
+
+	while task.wait(2) do
+		-- Updates the enviorment attribute to a random number every 2 seconds
+		NPCController:UpdateFunctionEnviorment("MovementSpeed", math.random(10,40))
+	end
+	```
+]=]
 
 -- Updates a enviorment variable during runtime
 function EcosystemMetaData:UpdateFunctionEnviorment(EnvVar: string, Data: any?)
@@ -1062,6 +1111,32 @@ function EcosystemMetaData:UpdateFunctionEnviorment(EnvVar: string, Data: any?)
 
 	EcMT.EnviormentUpdate:Fire(EnvVar, Data, ParseKeywords(OldData))
 end
+
+--[=[
+	@within Ecosystem
+	@method GetEnviorment
+
+	@param EnvVar string? -- The index of the enviorment variable
+
+	@return any
+
+	Returns the value of a enviorment variable with the given index
+
+	:::info Read-Only
+	The `Ecosystem` object **IS** able to write to `EnviormentVariables`, through  [`UpdateFunctionEnviorment`](#UpdateFunctionEnviorment).
+	:::
+	
+	### Example:
+	```lua
+	local NPCController = Ecosystem.NewEcosystem("JumpingNPC")
+	NPCController:SetFunctionEnviorment("GlobalVariable", 10) -- Initial value of 10
+
+	print(NPCController:GetEnviorment("GlobalVariable")) -- 10
+	print(NPCController:GetEnviorment("GlobalVariable2")) -- nil
+	print(NPCController:GetEnviorment()) -- The dictionary of enviorment properties
+
+	```
+]=]
 
 -- Gets the enviorment or a specific variable
 function EcosystemMetaData:GetEnviorment(EnvVar: string?)
@@ -1083,6 +1158,58 @@ function EcosystemMetaData:GetEnviorment(EnvVar: string?)
 	end
 end
 
+--[=[
+	@within Ecosystem
+	@method ForceState
+
+	@param StateID string -- A valid stateID
+
+	Forces all `Species` objects binded to the `Ecosystem` to instantly switch to the next State
+	
+	### Example:
+	```lua
+	local NPCController = Ecosystem.NewEcosystem("WanderNPC")
+
+	-- State Walk
+	NPCController:AddStateAndFeature("Wander", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		local CurrentObjectHumanoid:Humanoid = CurrentSpecies.ObjectBinded.Humanoid
+		local HRP:BasePart = CurrentSpecies.ObjectBinded.HumanoidRootPart
+
+		CurrentObjectHumanoid.WalkSpeed = 16
+
+		while task.wait(1) do
+			-- Move to a random position with a 50 stud box every second
+			CurrentObjectHumanoid:MoveTo(math.random(-50,50) + HRP.position.X, 0, math.random(-50, 50) + HRP.position.Z)
+		end
+	end)
+
+	-- State Stun
+	NPCController:AddStateAndFeature("Stun", function(CurrentSpecies: Ecosystem.Species, StateFrom: string): string
+		local CurrentObjectHumanoid:Humanoid = CurrentSpecies.ObjectBinded.Humanoid
+		CurrentObjectHumanoid.WalkSpeed = 0
+		task.wait(1)
+		return "Wander"
+	end)
+	
+	-- Creates 5 independent Specie objects binded to the WanderNPC Ecosystem controller
+	for i = 1,5 do
+		local C = NPCModel:Clone()
+		local Species = Ecosystem.NewSpecies("WanderNPC", C)
+		C.parent = workspace
+
+		Species:Start("Wander")
+	end
+
+	-- Starts the runtime loop
+	Species:Start("Wander")
+
+	while task.wait(5) do
+		-- Forces the stun state on all Species for 1 second
+		NPCController:ForceState("Stun")
+	end
+	```
+]=]
+
 -- Forces all species connected to the controller to all piviot to a new state
 function EcosystemMetaData:ForceAllStates(StateID: string)
 	local EcMT: IEcosystem = self[EcosystemMetatableKey]
@@ -1101,7 +1228,35 @@ end
 ----------------------------------------------------------------------------------------------
 --					 		[[ Public service (constructor) ]]
 
+--[=[
+	@class EcosystemGlobalServices
+	The constructor class of [Ecosystem](./Ecosystem) & [Species](./Species) + other global features.
+
+	:::info Module return
+	`EcosystemGlobalServices` is the dictionary that is returned after calling `require('Ecosystem')`
+	:::
+]=]
+
 local Ecosystem = {}
+
+--[=[
+	@within EcosystemGlobalServices
+	@function NewEcosystem
+
+	@param Identifyer string -- the ID assigned to the current Ecosystem object
+
+	@return Ecosystem
+
+	Creates a new `Ecosystem` object
+
+	## Example
+	```lua
+	local Ecosystem = require("Path to ecosystem module")
+	local EcosystemObject1 = Ecosystem.NewEcosystem("TestEcosystem")
+
+	print(EcosystemObject1.ClassName) -- Ecosystem
+	```
+]=]
 
 -- Constructs a Ecosystem. (Controller class)
 function Ecosystem.NewEcosystem(Identifyer: string): Ecosystem
@@ -1135,6 +1290,37 @@ function Ecosystem.NewEcosystem(Identifyer: string): Ecosystem
 
 	return E
 end
+
+--[=[
+	@within EcosystemGlobalServices
+	@function NewSpecies
+
+	@param Identifyer string -- the ID assigned to the current Ecosystem object
+	@param ObjectToBind Instance? -- The optional instance to be binded to the species object
+
+	@return Species
+
+	Creates a new `Species` object from the passed `Ecosystem` Identifyer
+
+	:::caution Must freeze
+	Before creating a `Species` object you must first call `Ecosystem:Freeze()` you can check if a Ecosystem is frozen with `Ecosystem.Frozen`
+	:::
+
+	## Example
+	```lua
+	local Ecosystem = require("Path to ecosystem module")
+	local EcosystemObject1 = Ecosystem.NewEcosystem("TestEcosystem")
+
+	print(EcosystemObject1.ClassName) -- Ecosystem
+
+	-- Turns the Ecosystem object into a read-only template
+	EcosystemObject1:Freeze()
+
+	local TestSpecies = Ecosystem.NewSpecies("TestEcosystem")
+
+	print(TestSpecies.ClassName) -- Species
+	```
+]=]
 
 -- Constructs a Specie. (A runtime class)
 function Ecosystem.NewSpecies(Identifyer: string, ObjectToBind: Instance?)

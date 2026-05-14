@@ -7,5 +7,5 @@ sidebar_position: 1
 CLASS DESCRIPTION:
 
 - [Installation guide](/docs/Install)
-- [**API Docs**](/api/Ecosystem)
+- [**API Docs**](/api/EcosystemGlobalServices)
 - [Examples](/docs/Examples)

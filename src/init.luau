@@ -1,5 +1,7 @@
--- Ecosystem V 2.4.0
+-- Ecosystem V 2.4.1
 -- @Patriots8800
+
+-- Documentation: https://green-screen.github.io/Ecosystem/
 
 --!strict
 
@@ -16,7 +18,7 @@ local TramService = require("./Ecosystem/Dependencies/TramService")
 
 --[=[
 	@class Ecosystem
-	The main controller class, this object acts as the leader and template for all subclasse [Species](./Species) and retains its control during runtime.
+	The main controller class, this object acts as the leader and template for all subclass [Species](/api/Species) and retains its control during runtime.
 ]=]
 
 --[=[
@@ -163,13 +165,13 @@ export type Ecosystem = SecureClasses.WrappedMetatable<{
 
 --[=[
 	@class Species
-	The runtime class of Ecosystem. A specie clones properties from Ecosystem and runs them individually with the ability to share data among other species classes through the [Ecosystem](./Ecosystem) controller
+	The runtime class of Ecosystem. A specie clones properties from Ecosystem and runs them individually with the ability to share data among other species classes through the [Ecosystem](/api/Ecosystem) controller
 ]=]
 
 --[=[
 	@within Species
 	@type Species SecuredClass <Species>
-	The `Ecosystem` object is wrapped inside of the `SecuredClass` this provides protections such as proper read-only properties + more
+	The `Species` object is wrapped inside of the `SecuredClass` this provides protections such as proper read-only properties + more
 ]=]
 
 --[=[
@@ -1230,7 +1232,7 @@ end
 
 --[=[
 	@class EcosystemGlobalServices
-	The constructor class of [Ecosystem](./Ecosystem) & [Species](./Species) + other global features.
+	The constructor class of [Ecosystem](/api/Ecosystem) & [Species](/api/Ecosystem) + other global features.
 
 	:::info Module return
 	`EcosystemGlobalServices` is the dictionary that is returned after calling `require('Ecosystem')`
@@ -1241,6 +1243,7 @@ local Ecosystem = {}
 
 --[=[
 	@within EcosystemGlobalServices
+	@tag Constructor
 	@function NewEcosystem
 
 	@param Identifyer string -- the ID assigned to the current Ecosystem object
@@ -1293,6 +1296,7 @@ end
 
 --[=[
 	@within EcosystemGlobalServices
+	@tag Constructor
 	@function NewSpecies
 
 	@param Identifyer string -- the ID assigned to the current Ecosystem object
@@ -1372,7 +1376,41 @@ function Ecosystem.NewSpecies(Identifyer: string, ObjectToBind: Instance?)
 	return S
 end
 
-----------------------------------------------------------------------------------------------
+--[=[
+	@within EcosystemGlobalServices
+	@method GetSpeciesFromBindedInstance
+
+	@param I Instance -- A instance that potentially has a species object binded to it
+	@param Controller Ecosystem? -- Searches the Controller object instead of global
+
+	@return Species?
+
+	Gets the species object binded to a instance
+
+	:::tip Time-Complexity
+	Providing a controller object will change the time complexity to `O(n)` instead of the default without `O(n^2)`. **NOTE** if a controller is provided it will only search the controller that is passed.
+	:::
+
+	## Example
+	```lua
+	local Ecosystem = require("Path to ecosystem module")
+	local EcosystemObject1 = Ecosystem.NewEcosystem("TestEcosystem")
+	local TestNPC = workspace.NPC
+
+	-- Turns the Ecosystem object into a read-only template
+	EcosystemObject1:Freeze()
+
+	local TestSpecies = Ecosystem.NewSpecies("TestEcosystem", TestNPC)
+
+	print(TestSpecies.ObjectBinded == TestNPC) -- true
+
+	-- The same Species object
+	local TestSpecies2 = Ecosystem:GetSpeciesFromBindedInstance(TestNPC, EcosystemObject1)
+
+	print(TestSpecies2.ObjectBinded == TestNPC) -- true
+	
+	```
+]=]
 
 -- Passing the controller makes the search O(n) without its O(n^2)
 function Ecosystem:GetSpeciesFromBindedInstance(I: Instance, Controller: Ecosystem?): Species?
@@ -1398,6 +1436,36 @@ function Ecosystem:GetSpeciesFromBindedInstance(I: Instance, Controller: Ecosyst
 	end
 	return nil
 end
+
+--[=[
+	@within EcosystemGlobalServices
+	@method GetEcosystemFromSpecie
+
+	@param S Species -- The species you want to get the controller for
+
+	@return Ecosystem?
+
+	Gets the Ecosystem object binded to the passed Species
+
+	## Example
+	```lua
+	local Ecosystem = require("Path to ecosystem module")
+	local EcosystemObject1 = Ecosystem.NewEcosystem("TestEcosystem")
+
+	-- Turns the Ecosystem object into a read-only template
+	EcosystemObject1:Freeze()
+
+	local TestSpecies = Ecosystem.NewSpecies("TestEcosystem")
+
+	print(EcosystemObject1.EcosystemID) -- TestEcosystem
+
+	-- The same Ecosystem object
+	local EcosystemObject2 = Ecosystem:GetEcosystemFromSpecie(TestSpecies)
+
+	print(EcosystemObject1.EcosystemID) -- TestEcosystem
+	
+	```
+]=]
 
 -- Gets Ecosystem (controller class) from the species object
 function Ecosystem:GetEcosystemFromSpecie(S: Species): Ecosystem?

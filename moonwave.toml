@@ -5,7 +5,7 @@ changelog = true
 gitSourceBranch = "main" 
 
 [docusaurus]
-tagline = "A luau FSM built for speed, mass control, and performance all while remaining secure"
+tagline = "A luau FSM built for speed, mass control, and performance while maintaining maximum security"
 
 [[navbar.items]]
 className = "discord-logo-link"
@@ -23,13 +23,13 @@ enabled = true
 includeReadme = false
 
 [[home.features]]
-description = "FEATURE DESCRIPTION"
-title = "FEATURE 1"
+description = "Ecosystem is an (SPCC) or a single point source controller it is ment to interact with a massive amount of things. Such as a mass ai controller where you can easily assign a state or globally update a variable with a single function."
+title = "Single Point Source"
 
 [[home.features]]
-description = "FEATURE DESCRIPTION"
-title = "FEATURE 2"
+description = "Ecosystem has been tested on a mass scale in many of my personal and other production projects of others. It is memory efficient and built for a dynamic ecosystem, just as how the name originates it is built to manage everything and anything. From a UI element all the way to a mass AI controller of over 100+ simotaniously with litte effect on memory consumption."
+title = "Performance"
 
 [[home.features]]
-description = "FEATURE DESCRIPTION"
-title = "FEATURE 3"
+description = "Thanks to SecureClasses all internal Ecosystem variables are protected behind a UUID index. These properties can only be indexed through the Ecosystem enviorment, this allows Ecosystem to maintain it's speed while also up to the standard of ROBLOX objects such as CFrames, and Instances."
+title = "Security"

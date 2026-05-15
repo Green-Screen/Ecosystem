@@ -3,3 +3,6 @@ tmp.lua
 
 # Source map
 sourcemap.json
+
+# Website build
+build

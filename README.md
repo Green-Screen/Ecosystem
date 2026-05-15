@@ -1,11 +1,18 @@
 # Ecosystem
+### Current Version: V 2.4.1
 
-## Current Version: V 2.4.0
+## [**Documentation**](https://green-screen.github.io/Ecosystem/)
 
+## What is Ecosystem?
 Ecosystem is a FSM built for easy overall control ment to act as a manager
 and dispatcher to control many different things specializing in AI
 
+## Warnings
 ### **Make sure you set UseNewLuauTypeSolver to enabled in workspace properties to get proper intellisense**
+
+**Due to the experimental status of the type solver sometimes intellisense will not be available due to the complex tupe casting and packing enviorment**
+
+
 
 ### **Features:**
 
@@ -17,9 +24,6 @@ and dispatcher to control many different things specializing in AI
 
 ### **Changelog:**
 
--   Fixed StateFrom paramater not actually giving you the previous state.
--   Added experimental support of Stop method for closing a State from inside itself. (GC)
--   Added experimental State return of 'Stop' that is now registered to stop the state internally
--   Various performance and documentation additions
+-   Documentation
 
 **_This module is still in testing and is not yet ready for production usage_**

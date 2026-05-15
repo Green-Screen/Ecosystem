@@ -1,4 +1,3 @@
-local DeviceIdService = game:GetService("DeviceIdService")
 local Players = game:GetService("Players")
 
 -- Production state test

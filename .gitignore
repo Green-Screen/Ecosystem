@@ -6,3 +6,6 @@ sourcemap.json
 
 # Website build
 build
+
+#Css file
+.moonwave

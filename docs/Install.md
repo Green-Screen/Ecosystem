@@ -6,7 +6,7 @@ sidebar_position: 2
 # Current version: 2.4.1
 
 ## Method #1 - Roblox
-Download straight from the [roblox marketplace](https://create.roblox.com/store/asset) this will only contain the module itself.
+Download straight from the [roblox marketplace](https://create.roblox.com/store/asset/113941008234686/Ecosystem) this will only contain the module itself.
 
 ## Method #2 - Github
 Download straight from the releases subdirectory of this [repository](https://github.com/Green-Screen/Ecosystem/releases)
